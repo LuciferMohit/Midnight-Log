@@ -49,6 +49,17 @@ export default function HomePage() {
             <div className="text-zinc-500 text-sm">No active sprints.</div>
           </DashboardShell>
         </div>
+
+        {/* SLOT 4: Media/Backlog (Member B) */}
+        <div className="col-span-1 md:col-span-8 h-64">
+          <DashboardShell title="Media Backlog">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="h-20 bg-zinc-800 rounded"></div>
+              <div className="h-20 bg-zinc-800 rounded"></div>
+              <div className="h-20 bg-zinc-800 rounded"></div>
+            </div>
+          </DashboardShell>
+        </div>
       </div>
     </div>
   );

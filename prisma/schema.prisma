@@ -1,14 +1,59 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// The Master Contract
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- 1. Core User (Shared) ---
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  
+  // Relations to Modules
+  habits    Habit[]
+  media     MediaItem[]
+  projects  Project[]
+}
+
+// --- 2. Habits Module (Friend A) ---
+model Habit {
+  id          String   @id @default(uuid())
+  title       String
+  frequency   String   // "DAILY", "WEEKLY"
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  logs        HabitLog[]
+}
+
+model HabitLog {
+  id        String   @id @default(uuid())
+  date      DateTime @default(now())
+  status    String   // "COMPLETED", "SKIPPED"
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id])
+}
+
+// --- 3. Media Module (Friend B) ---
+model MediaItem {
+  id             String   @id @default(uuid())
+  title          String
+  type           String   // "GAME", "MOVIE"
+  status         String   // "BACKLOG", "DONE"
+  totalDuration  Int?     // HLTB Hours
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+}
+
+// --- 4. Projects Module (Friend C) ---
+model Project {
+  id          String   @id @default(uuid())
+  title       String
+  status      String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
 }
