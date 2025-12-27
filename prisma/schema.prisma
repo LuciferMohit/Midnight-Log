@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // --- 1. Core User (Shared) ---
@@ -42,20 +43,29 @@ model HabitLog {
 model MediaItem {
   id             String   @id @default(uuid())
   title          String
-  type           String   // "GAME", "MOVIE"
-  status         String   // "BACKLOG", "DONE"
+  type           String   // "GAME", "MOVIE", "SHOW", "BOOK"
+  status         MediaStatus @default(BACKLOG)
   totalDuration  Int?     // HLTB Hours
+  createdAt      DateTime @default(now())
   userId         String
   user           User     @relation(fields: [userId], references: [id])
 }
 
+enum MediaStatus {
+  BACKLOG
+  IN_PROGRESS
+  COMPLETED
+  DROPPED
+}
+
 // --- 4. Projects Module (Friend C) ---
 model Project {
-  id          String   @id @default(uuid())
-  title       String
-  status      String
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  id        String   @id @default(uuid())
+  title     String
+  status    String
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 }
 // --- 5. Scheduler Module (Lucifer) ---
 model TimeBlock {

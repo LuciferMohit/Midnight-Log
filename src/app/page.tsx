@@ -1,7 +1,11 @@
 import { DashboardShell } from "@/components/dashboard-shell";
 import { TimeGrid } from "@/features/scheduler/components/time-grid";
 import { getSchedule } from "@/features/scheduler/actions";
-import { SeedButton } from "@/features/scheduler/components/seed-button";
+import { HabitList } from "@/components/dashboard/habit-list";
+import { MediaList } from "@/components/dashboard/media-list";
+import { ProjectList } from "@/components/dashboard/project-list";
+// import { SeedButton } from "@/features/scheduler/components/seed-button";
+// import { AutoScheduleButton } from "@/features/scheduler/components/auto-schedule-button";
 
 export default async function HomePage() {
   // Fetch real data from DB
@@ -23,7 +27,8 @@ export default async function HomePage() {
           <div className="text-sm text-zinc-500" suppressHydrationWarning>
             {new Date().toLocaleDateString()}
           </div>
-          <SeedButton />
+          {/* <SeedButton /> */}
+          {/* <AutoScheduleButton /> */}
         </div>
       </div>
 
@@ -39,19 +44,21 @@ export default async function HomePage() {
         {/* SLOT 2: Habits (Member A) */}
         <div className="col-span-1 md:col-span-4 h-full">
           <DashboardShell title="Active Habits" className="h-full">
-            <div className="space-y-4">
-              <div className="p-3 bg-zinc-800/50 rounded flex justify-between">
-                <span>Drink Water</span>
-                <span className="text-emerald-400">Done</span>
-              </div>
-            </div>
+            <HabitList />
           </DashboardShell>
         </div>
 
-        {/* SLOT 3: Projects (Member C) */}
-        <div className="col-span-1 md:col-span-4 h-64">
+        {/* SLOT 3: Media Backlog */}
+        <div className="col-span-1 md:col-span-6 h-64">
+          <DashboardShell title="Media Backlog">
+            <MediaList />
+          </DashboardShell>
+        </div>
+
+        {/* SLOT 4: Projects (Member C) */}
+        <div className="col-span-1 md:col-span-6 h-64">
           <DashboardShell title="Active Projects">
-            <div className="text-zinc-500 text-sm">No active sprints.</div>
+            <ProjectList />
           </DashboardShell>
         </div>
       </div>

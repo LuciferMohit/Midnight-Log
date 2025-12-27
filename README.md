@@ -1,53 +1,91 @@
-# Midnight (v2)
+# Midnight: Personal Life Operating System (PLOS)
 
-**Intelligent Resource Orchestrator & Personal Life Operating System (PLOS)**
+> "Systems over motivation."
 
-Midnight is a modular monolith designed to solve the "Student Entropy" problem. Unlike standard to-do lists, it acts as an operating system for personal resources, using algorithms to match tasks to current energy levels and time constraints.
+**Midnight** is an intelligent resource orchestrator designed to align tasks with energy levels and time constraints. It moves beyond simple to-do lists by integrating habit tracking, media consumption, and project management into a single, cohesive dashboard.
 
-## 🚀 Tech Stack
+## 🚧 Project Status: v0.1 Alpha (Early Development)
+
+The core pillars of the system are currently functional in a "bare bones" state.
+
+### ✅ Completed Modules
+- **Resource Orchestrator:** 48-block daily time grid visualization (Server Actions + Prisma).
+- **Habits Module:** Daily tracking with "Mark Complete", "Edit", and "Delete" functionality.
+- **Media Backlog:** workflow for Games/Movies (Backlog → In Progress → Completed/Dropped).
+- **Projects Module:** Sprint-based project tracking with active/completed filtering.
+- **Database:** PostgreSQL schema with self-healing user creation ("Lucifer Demo" mode).
+
+### ⏳ In Progress / Roadmap
+- **The Link:** Drag-and-drop assignment of Tasks to the Time Grid.
+- **Energy Engine:** Algorithm to match high-energy tasks to peak performance hours.
+- **Authentication:** Migration from demo user to secure Auth (Clerk/NextAuth).
+- **Analytics:** Visualizing consistency and resource allocation over time.
+
+## 🛠 Tech Stack
 
 - **Framework:** Next.js 15 (App Router)
 - **Language:** TypeScript
-- **Database:** PostgreSQL 15 (Dockerized)
-- **ORM:** Prisma v5 (Stable)
-- **Styling:** Tailwind CSS + Custom Dashboard Shell
+- **Database:** PostgreSQL 15
+- **ORM:** Prisma v5
+- **Styling:** Tailwind CSS 4 + Radix UI
+- **Infrastructure:** Docker Compose
 
-## 🏗 Architecture
+## 🚀 Getting Started
 
-The project follows a **Feature-Sliced Design** to ensure modular independence:
+### 1. Clone the repository
+```bash
+git clone https://github.com/YOUR_USERNAME/midnight-plos.git
+cd midnight-plos
+```
 
-- `features/scheduler`: The core logic engine (Resource Orchestrator).
-- `features/habits`: Habit tracking and consistency algorithms.
-- `features/media`: Backlog management for games and movies.
-- `features/projects`: Agile-style sprint management for personal work.
+### 2. Install dependencies
+```bash
+npm install
+```
 
-## ⚡ Getting Started
+### 3. Set up Environment
+Create a `.env` file in the root:
 
-1. **Clone the repo**
-2. **Start Docker:** `docker-compose up -d`
-3. **Install dependencies:** `npm install`
-4. **Run the development server:** `npm run dev`
+```
+DATABASE_URL="postgresql://myuser:mypassword@localhost:5432/plos_db"
+```
+
+### 4. Initialize Database
+
+```bash
+# Start the DB container
+docker-compose up -d
+
+# Push schema
+npx prisma db push
+```
+
+### 5. Run the development server
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3000` to see the dashboard.
 
 ---
 
-## 🛠️ Developer Setup Guide (For Team Members)
+## 📝 Development Notes
 
-Follow these steps strictly to get the **Midnight** environment running locally.
+- **Demo Mode:** The system currently uses `lucifer-demo-id` as the hardcoded user. This enables rapid testing without authentication.
+- **Self-Healing:** User creation is handled via `upsert` in server actions, so you can create habits/media/projects without explicit user setup.
+- **Database:** PostgreSQL runs in Docker. Ensure Docker Desktop is running before starting the app.
 
-### 1. Prerequisites
+---
 
-- **Node.js (LTS)** & **npm**
-- [cite_start]**Docker Desktop** (Must be running for the database) [cite: 39]
-- **VS Code** (Recommended IDE)
+## 🔗 Architecture Overview
 
-### 2. Installation
+- `src/app/` - Next.js app structure (pages, layouts, actions)
+- `src/components/` - Reusable React components (UI + dashboard)
+- `src/features/` - Feature modules (habits, media, projects, scheduler)
+- `src/lib/` - Utilities and database client (Prisma)
+- `prisma/` - Schema and migrations
 
-````bash
-# 1. Clone the repository
-git clone [https://github.com/YOUR_USERNAME/midnight.git](https://github.com/YOUR_USERNAME/midnight.git)
-cd midnight
-
-# 2. Install dependencies
 npm install
 
 Here is the complete, ready-to-copy block to paste at the very bottom of your README.md. It includes the specific Docker instructions and the environment variables defined in your Handoff Report.

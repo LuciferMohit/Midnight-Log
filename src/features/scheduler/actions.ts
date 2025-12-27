@@ -137,3 +137,15 @@ export async function runAutoSchedule() {
 
   revalidatePath("/");
 }
+
+// Fetch real habits for the UI
+export async function getHabits() {
+  return await prisma.habit.findMany({
+    orderBy: { title: 'asc' },
+  });
+}
+
+// Fetch real projects for the UI
+export async function getProjects() {
+  return await prisma.project.findMany();
+}
