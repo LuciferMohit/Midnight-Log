@@ -2,39 +2,65 @@
 
 import { prisma } from "@/lib/db"
 import { revalidatePath } from "next/cache"
+import { getCurrentUser } from "@/lib/auth" // <--- Updated Import
+import { currentUser } from "@clerk/nextjs/server";
+import { EnergyLevel } from "@prisma/client"
 
-// --- CREATE ---
 export async function createHabit(formData: FormData) {
+  const { userId, isDev } = await getCurrentUser()
+
+  if (!userId) return { success: false, error: "Unauthorized" }
+
   const title = formData.get("title") as string
-  // Default to DAILY if not specified
-  const frequency = (formData.get("frequency") as string) || "DAILY" 
+  const frequency = (formData.get("frequency") as string) || "DAILY"
+  const energyLevel = (formData.get("energyLevel") as EnergyLevel) || "MEDIUM"
+  const duration = parseInt(formData.get("duration") as string) || 30
+  const defaultTime = (formData.get("defaultTime") as string) || null
 
   if (!title || title.trim() === "") {
     return { success: false, error: "Title is required" }
   }
 
   try {
-    // Ensure the Demo User exists before creating the habit
-    await prisma.user.upsert({
-      where: { id: "lucifer-demo-id" },
-      update: {}, // If user exists, do nothing
-      create: {
-        id: "lucifer-demo-id",
-        name: "Lucifer",
-        email: "lucifer@midnight.local" // Dummy email required by schema
+    // 1. SELF-HEALING: Sync User to Postgres
+    let userEmail = "no-email@midnight.local";
+    let userName = "Traveler";
+
+    if (!isDev) {
+      const clerkUser = await currentUser();
+      if (clerkUser) {
+        userEmail = clerkUser.emailAddresses[0]?.emailAddress || userEmail;
+        userName = clerkUser.firstName || userName;
       }
+    } else {
+      userEmail = "admin@midnight.local";
+      userName = "System Admin";
+    }
+
+    await prisma.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: {
+        id: userId,
+        email: userEmail,
+        name: userName,
+      },
     })
 
-    // Now it is safe to create the habit
+    // 2. Create Habit
     await prisma.habit.create({
       data: {
-        userId: "lucifer-demo-id", // Hardcoded for alpha
+        userId: userId,
         title: title.trim(),
-        frequency: frequency,
+        frequency,
+        energyLevel,
+        duration,
+        defaultTime,
       },
     })
 
     revalidatePath("/")
+    revalidatePath("/habits")
     return { success: true }
   } catch (error) {
     console.error("Failed to create habit:", error)
@@ -42,77 +68,86 @@ export async function createHabit(formData: FormData) {
   }
 }
 
-// --- UPDATE ---
+// ... Rest of the file (Update/Delete/Toggle) ...
+
+export async function deleteHabit(habitId: string) {
+  const { userId } = await getCurrentUser()
+  if (!userId) return { success: false }
+
+  await prisma.habit.deleteMany({
+    where: {
+      id: habitId,
+      userId: userId // <--- Security
+    }
+  })
+  revalidatePath("/")
+  revalidatePath("/habits")
+  return { success: true }
+}
+
 export async function updateHabit(habitId: string, formData: FormData) {
-  const title = formData.get("title") as string
-  const frequency = formData.get("frequency") as string
+  const { userId } = await getCurrentUser()
+  if (!userId) return { success: false, error: "Unauthorized" }
+
+  const title = formData.get("title") as string;
+  const frequency = formData.get("frequency") as string;
 
   try {
-    await prisma.habit.update({
-      where: { id: habitId },
+    await prisma.habit.updateMany({
+      where: { id: habitId, userId: userId },
       data: {
         title: title,
-        frequency: frequency
-      }
-    })
-    
-    revalidatePath("/")
-    return { success: true }
+        frequency: frequency,
+      },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/habits");
+    return { success: true };
   } catch (error) {
-    console.error("Failed to update habit:", error)
-    return { success: false, error: "Failed to update" }
+    console.error("Failed to update habit:", error);
+    return { success: false, error: "Failed to update" };
   }
 }
 
-// --- DELETE ---
-export async function deleteHabit(habitId: string) {
-  try {
-    // 1. Cleanup logs first (Cascade delete manual handling if DB doesn't do it)
-    await prisma.habitLog.deleteMany({
-      where: { habitId }
-    })
+export async function toggleHabit(habitId: string) {
+  const { userId } = await getCurrentUser()
+  if (!userId) return { success: false, error: "Unauthorized" }
 
-    // 2. Delete the habit
-    await prisma.habit.delete({
+  try {
+    const habit = await prisma.habit.findUnique({
       where: { id: habitId }
     })
 
-    revalidatePath("/")
-    return { success: true }
-  } catch (error) {
-    console.error("Failed to delete habit:", error)
-    return { success: false, error: "Failed to delete" }
-  }
-}
+    if (!habit || habit.userId !== userId) {
+      return { success: false, error: "Unauthorized" }
+    }
 
-// --- TOGGLE (EXISTING) ---
-export async function toggleHabit(habitId: string) {
-  try {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     const existingLog = await prisma.habitLog.findFirst({
       where: {
         habitId: habitId,
-        date: { gte: today }, // Using 'date' per your schema
+        date: { gte: today },
       },
-    })
+    });
 
     if (existingLog) {
-      await prisma.habitLog.delete({ where: { id: existingLog.id } })
+      await prisma.habitLog.delete({ where: { id: existingLog.id } });
     } else {
       await prisma.habitLog.create({
         data: {
           habitId: habitId,
-          status: "COMPLETED", // Using 'status' per your schema
+          status: "COMPLETED",
         },
-      })
+      });
     }
 
-    revalidatePath("/")
-    return { success: true }
+    revalidatePath("/");
+    return { success: true };
   } catch (error) {
-    console.error("Failed to toggle habit:", error)
-    return { success: false, error: "Failed to toggle" }
+    console.error("Failed to toggle habit:", error);
+    return { success: false, error: "Failed to toggle" };
   }
 }

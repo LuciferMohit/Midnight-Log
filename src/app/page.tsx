@@ -1,15 +1,45 @@
 import { DashboardShell } from "@/components/dashboard-shell";
 import { TimeGrid } from "@/features/scheduler/components/time-grid";
+import { ResourceSummary } from "@/features/scheduler/components/resource-summary";
 import { getSchedule } from "@/features/scheduler/actions";
 import { HabitList } from "@/components/dashboard/habit-list";
 import { MediaList } from "@/components/dashboard/media-list";
 import { ProjectList } from "@/components/dashboard/project-list";
-// import { SeedButton } from "@/features/scheduler/components/seed-button";
-// import { AutoScheduleButton } from "@/features/scheduler/components/auto-schedule-button";
+import { AutoScheduleButton } from "@/features/scheduler/components/auto-schedule-button";
+import { ClearButton } from "@/features/scheduler/components/clear-button";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth"; // <--- Updated Import
+import { currentUser } from "@clerk/nextjs/server";
 
 export default async function HomePage() {
-  // Fetch real data from DB
+  const { userId, isDev } = await getCurrentUser(); // <--- Use Abstraction
+
+  // Decide what name to show
+  let displayName = "Traveler";
+  if (isDev) {
+    displayName = "System Admin";
+  } else {
+    const clerkUser = await currentUser();
+    if (clerkUser?.firstName) displayName = clerkUser.firstName;
+  }
+
+  // Redirect or handle unauthenticated state (though middleware should catch this)
+  if (!userId) return null;
+
+  // 1. Fetch Schedule (Existing)
   const scheduleData = await getSchedule();
+
+  // 2. Fetch Active Habits for the "Command Menu"
+  const habits = await prisma.habit.findMany({
+    where: { userId: userId },
+    select: { id: true, title: true },
+  });
+
+  // 3. Fetch Active Projects for the "Command Menu"
+  const projects = await prisma.project.findMany({
+    where: { userId: userId, status: "ACTIVE" },
+    select: { id: true, title: true },
+  });
 
   return (
     <div className="flex flex-col h-full p-6 space-y-6">
@@ -20,15 +50,15 @@ export default async function HomePage() {
             Midnight Station
           </h1>
           <p className="text-zinc-400">
-            Welcome back, Lucifer. Systems operational.
+            Welcome back, {displayName}. Systems operational.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-sm text-zinc-500" suppressHydrationWarning>
             {new Date().toLocaleDateString()}
           </div>
-          {/* <SeedButton /> */}
-          {/* <AutoScheduleButton /> */}
+          <ClearButton />
+          <AutoScheduleButton />
         </div>
       </div>
 
@@ -37,7 +67,17 @@ export default async function HomePage() {
         {/* SLOT 1: The Scheduler (Your Core Feature) */}
         <div className="col-span-1 md:col-span-8 h-full">
           <DashboardShell title="Resource Orchestrator" className="h-full">
-            <TimeGrid initialData={scheduleData} />
+            <div className="space-y-4">
+              {/* Resource Summary Stats */}
+              <ResourceSummary schedule={scheduleData} />
+
+              {/* The Interactive Grid */}
+              <TimeGrid
+                initialSchedule={scheduleData}
+                habits={habits}
+                projects={projects}
+              />
+            </div>
           </DashboardShell>
         </div>
 

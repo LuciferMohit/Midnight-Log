@@ -1,71 +1,101 @@
-'use server'
+"use server";
 
-import { prisma } from "@/lib/db"
-import { revalidatePath } from "next/cache"
+import { prisma } from "@/lib/db";
+import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/lib/auth"; // <--- Updated Import
+import { currentUser } from "@clerk/nextjs/server";
 
 // --- CREATE ---
 export async function createProject(formData: FormData) {
-  const title = formData.get("title") as string
-  
+  const { userId, isDev } = await getCurrentUser();
+
+  if (!userId) return { success: false, error: "Unauthorized" };
+
+  const title = formData.get("title") as string;
+
   if (!title || title.trim() === "") {
-    return { success: false, error: "Title is required" }
+    return { success: false, error: "Title is required" };
   }
 
   try {
-    // Safety check: Ensure user exists
+    // 1. SELF-HEALING: Ensure User exists
+    let userEmail = "no-email@midnight.local";
+    let userName = "Traveler";
+
+    if (!isDev) {
+      const clerkUser = await currentUser();
+      if (clerkUser) {
+        userEmail = clerkUser.emailAddresses[0]?.emailAddress || userEmail;
+        userName = clerkUser.firstName || userName;
+      }
+    } else {
+      userEmail = "admin@midnight.local";
+      userName = "System Admin";
+    }
+
     await prisma.user.upsert({
-      where: { id: "lucifer-demo-id" },
+      where: { id: userId },
       update: {},
       create: {
-        id: "lucifer-demo-id",
-        name: "Lucifer",
-        email: "lucifer@midnight.local"
-      }
-    })
+        id: userId,
+        email: userEmail,
+        name: userName,
+      },
+    });
 
+    // 2. Create Project
     await prisma.project.create({
       data: {
-        userId: "lucifer-demo-id",
+        userId: userId,
         title: title.trim(),
         status: "ACTIVE",
       },
-    })
+    });
 
-    revalidatePath("/")
-    return { success: true }
+    revalidatePath("/");
+    revalidatePath("/projects");
+    return { success: true };
   } catch (error) {
-    console.error("Failed to create project:", error)
-    return { success: false, error: "Database error" }
+    console.error("Failed to create project:", error);
+    return { success: false, error: "Database error" };
   }
 }
 
 // --- UPDATE STATUS ---
 export async function updateProjectStatus(id: string, newStatus: string) {
-  try {
-    await prisma.project.update({
-      where: { id },
-      data: { status: newStatus }
-    })
+  const { userId } = await getCurrentUser();
+  if (!userId) return { success: false, error: "Unauthorized" };
 
-    revalidatePath("/")
-    return { success: true }
+  try {
+    await prisma.project.updateMany({
+      where: { id, userId }, // Ownership
+      data: { status: newStatus },
+    });
+
+    revalidatePath("/");
+    revalidatePath("/projects");
+    return { success: true };
   } catch (error) {
-    console.error("Failed to update project:", error)
-    return { success: false, error: "Failed to update" }
+    console.error("Failed to update project:", error);
+    return { success: false, error: "Failed to update" };
   }
 }
 
 // --- DELETE ---
 export async function deleteProject(id: string) {
-  try {
-    await prisma.project.delete({
-      where: { id }
-    })
+  const { userId } = await getCurrentUser();
+  if (!userId) return { success: false, error: "Unauthorized" };
 
-    revalidatePath("/")
-    return { success: true }
+  try {
+    await prisma.project.deleteMany({
+      where: { id, userId }, // Ownership
+    });
+
+    revalidatePath("/");
+    revalidatePath("/projects");
+    return { success: true };
   } catch (error) {
-    console.error("Failed to delete project:", error)
-    return { success: false, error: "Failed to delete" }
+    console.error("Failed to delete project:", error);
+    return { success: false, error: "Failed to delete" };
   }
 }

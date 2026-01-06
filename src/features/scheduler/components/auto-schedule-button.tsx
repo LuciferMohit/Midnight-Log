@@ -1,14 +1,31 @@
-'use client'
+"use client";
 
-import { runAutoSchedule } from "../actions"
+import { runAutoSchedule } from "../actions";
+import { useTransition } from "react";
+import { Sparkles } from "lucide-react";
 
 export function AutoScheduleButton() {
+  const [isPending, startTransition] = useTransition();
+
+  const handleClick = () => {
+    startTransition(async () => {
+      const result = await runAutoSchedule();
+      if (result.success) {
+        console.log(`✅ Scheduled ${result.count} new blocks`);
+      } else {
+        console.error("❌ Scheduling failed:", result.error);
+      }
+    });
+  };
+
   return (
     <button
-      onClick={() => runAutoSchedule()}
-      className="px-3 py-1 text-xs bg-blue-900/30 text-blue-400 border border-blue-900 rounded hover:bg-blue-900/50"
+      onClick={handleClick}
+      disabled={isPending}
+      className="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg flex items-center gap-2 transition-colors"
     >
-      ⚡ Auto Schedule
+      <Sparkles className="w-4 h-4" />
+      {isPending ? "Scheduling..." : "Auto-Schedule"}
     </button>
-  )
+  );
 }

@@ -23,12 +23,16 @@ model User {
 
 // --- 2. Habits Module (Friend A) ---
 model Habit {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   title       String
-  frequency   String   // "DAILY", "WEEKLY"
+  frequency   String       // "DAILY", "WEEKLY"
+  energyLevel EnergyLevel  @default(MEDIUM) // Which time of day this habit fits best
+  duration    Int          @default(60) // Duration in minutes
+  defaultTime String?      // Optional fixed time anchor (Format: "HH:MM")
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
   logs        HabitLog[]
+  timeBlocks  TimeBlock[]  // Reverse relation from TimeBlock
 }
 
 model HabitLog {
@@ -58,6 +62,12 @@ enum MediaStatus {
   DROPPED
 }
 
+enum EnergyLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 // --- 4. Projects Module (Friend C) ---
 model Project {
   id        String   @id @default(uuid())
@@ -66,20 +76,24 @@ model Project {
   createdAt DateTime @default(now())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+  timeBlocks TimeBlock[] // Reverse relation from TimeBlock
 }
 // --- 5. Scheduler Module (Lucifer) ---
 model TimeBlock {
   id        String   @id @default(uuid())
-  day       String   // "MONDAY", "TUESDAY", etc.
-  slotIndex Int      // 0 to 47 (representing the 48 half-hour slots in a day)
-  type      String   // "OCCUPIED" (User set) or "ALLOCATED" (Algo set)
-  
-  // Optional: If the algo filled this slot, what did it put here?
-  activityId String? // ID of the Project or Habit
-  activityType String? // "HABIT" or "PROJECT"
-
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  day       Int      // 0-6 (Mon-Sun)
+  slotIndex Int      // 0-47 (00:00 - 23:30)
+  isOccupied Boolean @default(false)
+  
+  // Links to specific tasks
+  habitId   String?  // Optional: Linked to a Habit
+  habit     Habit?   @relation(fields: [habitId], references: [id], onDelete: SetNull)
+  
+  projectId String?  // Optional: Linked to a Project
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([userId, day, slotIndex]) // Prevents two blocks in the same slot
 }
